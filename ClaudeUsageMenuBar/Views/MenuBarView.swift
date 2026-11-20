@@ -125,6 +125,10 @@ struct MenuBarView: View {
     private var moreMenu: some View {
         Menu {
             Button("Settings…") { SettingsWindow.show() }
+            Toggle("Show Fable Weekly Limit", isOn: Binding(
+                get: { providers.showsClaudeFableLimit },
+                set: { providers.setShowsClaudeFableLimit($0) }
+            ))
             Button("Check for Updates…") { updateService.checkForUpdates() }
                 .disabled(!updateService.canCheckForUpdates)
             Divider()

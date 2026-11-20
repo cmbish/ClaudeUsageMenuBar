@@ -25,6 +25,8 @@ If Claude Code is signed in on your Mac, the app reads Claude usage with that lo
 
 Otherwise, click the menu bar icon, then click the person icon next to Claude, Codex or Cursor. Sign in to each site once. The logins are separate, so signing out of one does not sign out the others.
 
+Claude's Fable weekly limit is hidden by default. To show it as its own row, turn on **Show Fable Weekly Limit** in the **…** menu.
+
 For Cursor it shows the Other Models and Cursor Models pools, when the cycle resets, and your on-demand spend past the included pools. Cursor has no reset credits to redeem — its pools refill on the cycle date.
 
 Grok Bot shows its weekly included usage and when it resets. Grok Bot is metered on your Cursor account, so it shares the Cursor login: sign in to Cursor and Grok Bot is signed in too.

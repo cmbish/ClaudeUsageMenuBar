@@ -13,6 +13,7 @@ final class UsageProviders: ObservableObject {
     private static let selectionKey = "menuBarProviderID"
     private static let hiddenKey = "hiddenProviderIDs"
     private static let cursorMetricKey = "cursorMenuBarMetricID"
+    private static let fableLimitKey = "showsClaudeFableLimit"
 
     // Cursor reports several metrics; the menu bar can show any one of them.
     // There is no Included option: that total is just the two pools combined,
@@ -57,6 +58,10 @@ final class UsageProviders: ObservableObject {
     // provider. Chosen from the Gemini section's Menu bar row; persisted.
     @Published private(set) var geminiMenuBarMetricID: String
 
+    // Whether Claude's Fable weekly limit gets a row. Off by default; chosen
+    // from the More menu and persisted.
+    @Published private(set) var showsClaudeFableLimit: Bool
+
     init(providers: [UsageProvider] = UsageProvider.all, defaults: UserDefaults = .standard) {
         self.defaults = defaults
         services = providers.map { UsageService(provider: $0) }
@@ -81,7 +86,12 @@ final class UsageProviders: ObservableObject {
         geminiMenuBarMetricID = Self.geminiMetricOptions.contains { $0.id == savedGeminiMetric }
             ? (savedGeminiMetric ?? "argon") : "argon"
 
+        let showsFable = defaults.bool(forKey: Self.fableLimitKey)
+        showsClaudeFableLimit = showsFable
+
         services.forEach { $0.isRefreshPaused = hidden.contains($0.provider.id) }
+        services.first { $0.provider.id == UsageProvider.claude.id }?
+            .hiddenClaudeScopedLimits = Self.hiddenClaudeScopedLimits(showsFable: showsFable)
         // Grok Bot is combined into Cursor overall: it is no longer a top-level
         // menu-bar selection, so a saved Grok Bot selection becomes Cursor.
         if selectedMenuBarProviderID == UsageProvider.grokBot.id,
@@ -152,6 +162,21 @@ final class UsageProviders: ObservableObject {
         if selectedMenuBarProviderID == providerID {
             selectedMenuBarProviderID = visibleServices.first?.provider.id ?? providerID
         }
+    }
+
+    // Showing or hiding the Fable row refreshes Claude right away, so the row
+    // appears or leaves without waiting for the next poll.
+    func setShowsClaudeFableLimit(_ shows: Bool) {
+        guard shows != showsClaudeFableLimit else { return }
+        showsClaudeFableLimit = shows
+        defaults.set(shows, forKey: Self.fableLimitKey)
+        guard let claude = services.first(where: { $0.provider.id == UsageProvider.claude.id }) else { return }
+        claude.hiddenClaudeScopedLimits = Self.hiddenClaudeScopedLimits(showsFable: shows)
+        if isVisible(claude.provider.id) { claude.triggerRefresh() }
+    }
+
+    nonisolated static func hiddenClaudeScopedLimits(showsFable: Bool) -> Set<String> {
+        showsFable ? [] : ClaudeCodeUsageAPI.hiddenScopedLimits
     }
 
     // Picking a Cursor metric also selects Cursor for the menu bar, so the

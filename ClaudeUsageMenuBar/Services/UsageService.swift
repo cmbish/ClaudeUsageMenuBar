@@ -55,6 +55,9 @@ class UsageService: NSObject, ObservableObject, WKNavigationDelegate {
     // Set by UsageProviders while the provider is hidden from the menu: the
     // service keeps its state but stops polling until it is shown again.
     var isRefreshPaused = false
+    // Claude scoped limits left out of the rows. Set by UsageProviders from the
+    // Show Fable Weekly Limit choice.
+    var hiddenClaudeScopedLimits = ClaudeCodeUsageAPI.hiddenScopedLimits
 
     let provider: UsageProvider
 
@@ -164,7 +167,7 @@ class UsageService: NSObject, ObservableObject, WKNavigationDelegate {
                 loadUsagePage()
                 return
             }
-            let result = await ClaudeCodeUsageAPI.fetchResult(login: login)
+            let result = await ClaudeCodeUsageAPI.fetchResult(login: login, hiddenScopedLimits: hiddenClaudeScopedLimits)
             handleScrapingResult(result, error: nil)
             if result["availableResets"] != nil {
                 applyClaudeResets(result)

@@ -12,6 +12,7 @@ enum ClaudeCodeUsageAPI {
     static let keychainService = "Claude Code-credentials"
     static let requestTimeout: TimeInterval = 20
     static let expiredLoginMessage = "Claude Code's login has expired. Open Claude Code to renew it."
+    // Scoped limits left out unless the user turns on Show Fable Weekly Limit.
     static let hiddenScopedLimits: Set<String> = ["Fable"]
 
     struct Login: Equatable {
@@ -50,7 +51,12 @@ enum ClaudeCodeUsageAPI {
 
     // Returns the same dictionary shape as the page scraping scripts, so UsageService
     // handles both sources the same way.
-    static func fetchResult(login: Login, now: Date = Date(), session: URLSession = .shared) async -> [String: Any] {
+    static func fetchResult(
+        login: Login,
+        now: Date = Date(),
+        session: URLSession = .shared,
+        hiddenScopedLimits: Set<String> = ClaudeCodeUsageAPI.hiddenScopedLimits
+    ) async -> [String: Any] {
         if let expiresAt = login.expiresAt, expiresAt <= now {
             return result(["success": false, "error": expiredLoginMessage], debug: ["source": "claudeCodeLogin", "loginExpired": true])
         }
@@ -62,7 +68,12 @@ enum ClaudeCodeUsageAPI {
         do {
             let (data, response) = try await session.data(for: request)
             let httpStatus = (response as? HTTPURLResponse)?.statusCode ?? 0
-            return usageResult(from: data, httpStatus: httpStatus, planName: login.subscriptionType?.capitalized)
+            return usageResult(
+                from: data,
+                httpStatus: httpStatus,
+                planName: login.subscriptionType?.capitalized,
+                hiddenScopedLimits: hiddenScopedLimits
+            )
         } catch {
             return result(
                 ["success": false, "error": "Could not reach Anthropic: \(error.localizedDescription)"],
@@ -74,7 +85,13 @@ enum ClaudeCodeUsageAPI {
     // Maps the response's "limits" rows: "session" is the 5-hour limit, "weekly_all" the
     // weekly limit, and each "weekly_scoped" row a per-model weekly limit. Rows named in
     // hiddenScopedLimits are dropped.
-    static func usageResult(from data: Data, httpStatus: Int, planName: String?, timeZone: TimeZone = .current) -> [String: Any] {
+    static func usageResult(
+        from data: Data,
+        httpStatus: Int,
+        planName: String?,
+        timeZone: TimeZone = .current,
+        hiddenScopedLimits: Set<String> = ClaudeCodeUsageAPI.hiddenScopedLimits
+    ) -> [String: Any] {
         let debug: [String: Any] = [
             "source": "claudeCodeLogin",
             "httpStatus": httpStatus,

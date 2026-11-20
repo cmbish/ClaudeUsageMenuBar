@@ -67,6 +67,18 @@ final class ClaudeCodeUsageAPITests: XCTestCase {
         XCTAssertNil(result["designWeeklyLabel"] as? String)
     }
 
+    func testUsageResultShowsFableFirstWhenNoScopedLimitIsHidden() {
+        let result = ClaudeCodeUsageAPI.usageResult(
+            from: Data(usageBody.utf8), httpStatus: 200, planName: nil, timeZone: eastern, hiddenScopedLimits: []
+        )
+
+        XCTAssertEqual(result["sonnetWeeklyPercentage"] as? Int, 0)
+        XCTAssertEqual(result["sonnetWeeklyResetTime"] as? String, "Resets Oct 25, 2026 3:00 AM")
+        XCTAssertEqual(result["sonnetWeeklyLabel"] as? String, "Weekly (Fable)")
+        XCTAssertEqual(result["designWeeklyPercentage"] as? Int, 30)
+        XCTAssertEqual(result["designWeeklyLabel"] as? String, "Weekly (Sonnet)")
+    }
+
     func testUsageResultOn401ReportsExpiredLogin() {
         let result = ClaudeCodeUsageAPI.usageResult(from: Data(), httpStatus: 401, planName: nil)
 

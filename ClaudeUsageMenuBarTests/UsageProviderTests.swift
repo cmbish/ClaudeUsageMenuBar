@@ -74,6 +74,36 @@ final class UsageProviderTests: XCTestCase {
     }
 
     @MainActor
+    func testFableLimitStaysHiddenByDefault() {
+        let container = UsageProviders(providers: [.claude, .codex], defaults: makeSuiteDefaults().defaults)
+
+        XCTAssertFalse(container.showsClaudeFableLimit)
+        XCTAssertEqual(container.services.first { $0.provider.id == "claude" }!.hiddenClaudeScopedLimits, ["Fable"])
+    }
+
+    @MainActor
+    func testShowingFableLimitUnhidesItForClaudeAndPersists() {
+        let (defaults, suite) = makeSuiteDefaults()
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let container = UsageProviders(providers: [.claude, .codex], defaults: defaults)
+
+        container.setShowsClaudeFableLimit(true)
+
+        XCTAssertTrue(container.showsClaudeFableLimit)
+        XCTAssertTrue(container.services.first { $0.provider.id == "claude" }!.hiddenClaudeScopedLimits.isEmpty)
+        XCTAssertTrue(defaults.bool(forKey: "showsClaudeFableLimit"))
+
+        // A fresh container on the same defaults restores the choice.
+        let restored = UsageProviders(providers: [.claude, .codex], defaults: defaults)
+        XCTAssertTrue(restored.showsClaudeFableLimit)
+        XCTAssertTrue(restored.services.first { $0.provider.id == "claude" }!.hiddenClaudeScopedLimits.isEmpty)
+
+        restored.setShowsClaudeFableLimit(false)
+        XCTAssertEqual(restored.services.first { $0.provider.id == "claude" }!.hiddenClaudeScopedLimits, ["Fable"])
+        XCTAssertFalse(defaults.bool(forKey: "showsClaudeFableLimit"))
+    }
+
+    @MainActor
     func testCursorMenuBarMetricDefaultsToOtherModels() {
         let container = UsageProviders(providers: [.cursor], defaults: makeSuiteDefaults().defaults)
         let service = container.services[0]
