@@ -19,6 +19,21 @@ final class ClaudeCodeUsageAPITests: XCTestCase {
     }
     """
 
+    // MARK: - keychainService
+
+    func testKeychainServiceIsTheDefaultNameWithoutAConfigDir() {
+        XCTAssertEqual(ClaudeCodeUsageAPI.keychainService(configDir: nil), "Claude Code-credentials")
+        XCTAssertEqual(ClaudeCodeUsageAPI.keychainService(configDir: ""), "Claude Code-credentials")
+    }
+
+    func testKeychainServiceAddsTheHashOfTheConfigDir() {
+        // The first 8 hex characters of each path's SHA-256.
+        XCTAssertEqual(ClaudeCodeUsageAPI.keychainService(configDir: "/Users/example/.claude"),
+                       "Claude Code-credentials-402b469b")
+        XCTAssertEqual(ClaudeCodeUsageAPI.keychainService(configDir: "/Users/example/.claude-work"),
+                       "Claude Code-credentials-dd1118a7")
+    }
+
     // MARK: - parseLogin
 
     func testParseLoginReadsTokenExpiryAndPlan() {

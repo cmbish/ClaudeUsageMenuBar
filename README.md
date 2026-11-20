@@ -23,6 +23,14 @@ The first time you open it, macOS may warn that it's from an unidentified develo
 
 If Claude Code is signed in on your Mac, the app reads Claude usage with that login, and you do not need to sign in to Claude in the app.
 
+If you run Claude Code with `CLAUDE_CONFIG_DIR` set, it keeps a separate login for that folder. To read that login, give the app the same folder, then reopen the app:
+
+```
+defaults write com.alanmarcero.claudeusagemenubar claudeCodeConfigDir /Users/you/.claude-work
+```
+
+Use the full path exactly as the variable holds it. `defaults delete com.alanmarcero.claudeusagemenubar claudeCodeConfigDir` goes back to the default login.
+
 Otherwise, click the menu bar icon, then click the person icon next to Claude, Codex or Cursor. Sign in to each site once. The logins are separate, so signing out of one does not sign out the others.
 
 For Cursor it shows the Other Models and Cursor Models pools, when the cycle resets, and your on-demand spend past the included pools. Cursor has no reset credits to redeem — its pools refill on the cycle date.

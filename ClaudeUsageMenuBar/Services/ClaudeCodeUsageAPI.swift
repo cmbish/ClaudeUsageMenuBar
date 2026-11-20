@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 // Reads Claude usage the same way Claude Code's /usage does: it sends the OAuth login
@@ -10,6 +11,9 @@ enum ClaudeCodeUsageAPI {
     static let usageURL = URL(string: "https://api.anthropic.com/api/oauth/usage?cedar_ember=1")!
     static let betaHeader = "oauth-2025-04-20"
     static let keychainService = "Claude Code-credentials"
+    // UserDefaults key for the folder Claude Code runs with as CLAUDE_CONFIG_DIR, when
+    // it is set. Empty or missing reads the default login.
+    static let configDirKey = "claudeCodeConfigDir"
     static let requestTimeout: TimeInterval = 20
     static let expiredLoginMessage = "Claude Code's login has expired. Open Claude Code to renew it."
     static let hiddenScopedLimits: Set<String> = ["Fable"]
@@ -23,10 +27,10 @@ enum ClaudeCodeUsageAPI {
     // Reads through the security tool, not SecItemCopyMatching. Claude Code writes the
     // item with that tool, so the item's access list already trusts it and no prompt
     // shows. A direct read prompts again after each update of this ad hoc signed app.
-    static func readLogin() -> Login? {
+    static func readLogin(configDir: String? = UserDefaults.standard.string(forKey: ClaudeCodeUsageAPI.configDirKey)) -> Login? {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/security")
-        process.arguments = ["find-generic-password", "-s", keychainService, "-w"]
+        process.arguments = ["find-generic-password", "-s", keychainService(configDir: configDir), "-w"]
         let output = Pipe()
         process.standardOutput = output
         process.standardError = FileHandle.nullDevice
@@ -35,6 +39,16 @@ enum ClaudeCodeUsageAPI {
         process.waitUntilExit()
         guard process.terminationStatus == 0 else { return nil }
         return parseLogin(data)
+    }
+
+    // Claude Code keeps a separate login for each CLAUDE_CONFIG_DIR. With the variable
+    // set, it saves the login under the default name plus a dash and the first 8 hex
+    // characters of the SHA-256 of that path, even when the path is the default
+    // ~/.claude. The path is hashed as given, so it must match the variable exactly.
+    static func keychainService(configDir: String?) -> String {
+        guard let configDir, !configDir.isEmpty else { return keychainService }
+        let suffix = SHA256.hash(data: Data(configDir.utf8)).prefix(4).map { String(format: "%02x", $0) }.joined()
+        return "\(keychainService)-\(suffix)"
     }
 
     static func parseLogin(_ data: Data) -> Login? {
